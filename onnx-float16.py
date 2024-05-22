@@ -77,33 +77,30 @@ def _convert_constant_nodes_to_float16(node):
         else:
             new_outputs.append(vi)
 
-    node_args = {
-        "op_type" : node.op_type,
-        "inputs"  : node.input,
-        "outputs" : node.output,
-        "name"    : node.name,
-    }
+    new_node = h.make_node(
+        op_type = node.op_type,
+        inputs  = node.input,
+        outputs = node.output,
+        name    = node.name,
+    )
 
-    # ノードの属性をキャスト
+    # ノードの属性(定数)をキャスト
     if hasattr(node, 'attribute'):
-        new_attributes = []
         for attr in node.attribute:
             if hasattr(attr, 't') and has_float16(attr.t.data_type):
                 data = nph.to_array(attr.t).astype(np.float16)
                 new_t = nph.from_array(data)
-                new_attr = h.make_attribute(attr.name, new_t)
-                new_attributes.append(new_attr)
-            else:
-                new_attributes.append(attr)
-        node_args['attributes'] = new_attributes
-    return h.make_node(**node_args)
+                attr = h.make_attribute(attr.name, new_t)
+        new_node.attribute.append(attr)
+
+    return new_node
 
 def convert_constant_nodes_to_float16(nodes):
-    with Pool() as pool:
-        new_nodes = pool.map(_convert_constant_nodes_to_float16, nodes)
-#    new_nodes = []
-#    for node in nodes:
-#        new_nodes.append(_convert_constant_nodes_to_float16(node))
+#    with Pool() as pool:
+#        new_nodes = pool.map(_convert_constant_nodes_to_float16, nodes)
+    new_nodes = []
+    for node in nodes:
+        new_nodes.append(_convert_constant_nodes_to_float16(node))
     return new_nodes
 
 def convert_model_to_float16(model_path: str, out_path: str):
