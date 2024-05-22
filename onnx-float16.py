@@ -16,7 +16,7 @@ new_inputs = []
 new_outputs = []
 
 def find_by_name(_list, name):
-    for ite in _list:
+    for item in _list:
         if item.name == name:
             return item
     return None
