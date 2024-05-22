@@ -1,0 +1,33 @@
+#!/bin/python
+import onnx
+import argparse
+
+def main(model_path):
+    # ONNXモデルを読み込む
+    model = onnx.load(model_path)
+
+    # モデルの入力シェイプを取得
+    inputs = [[d.dim_value for d in _input.type.tensor_type.shape.dim] for _input in model.graph.input]
+
+    # 各入力とそのシェイプを表示
+    for input, input_shape in zip(model.graph.input, inputs):
+        shape_string = ""
+        for idx, shape in enumerate(input_shape):
+            if idx == 0 and shape == 0:
+                shape = 1
+            shape_string += f'{shape},'
+        print(f'"{input.name}": [{shape_string.rstrip(",")}]')
+
+    # モデルの各層を順番に表示
+    for i, node in enumerate(model.graph.node):
+        print(f"Layer {i+1}:")
+        print(f"  Name: {node.name}")
+        print(f"  OpType: {node.op_type}")
+        print(f"  Inputs: {node.input}")
+        print(f"  Outputs: {node.output}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Display the input shapes and layers of an ONNX model.")
+    parser.add_argument("model_path", type=str, help="Path to the ONNX model file.")
+    args = parser.parse_args()
+    main(args.model_path)
