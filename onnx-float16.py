@@ -7,7 +7,7 @@ from onnx import numpy_helper as nph
 
 import numpy as np
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import Pool
 
 from logger import log
 import typer
@@ -31,12 +31,10 @@ def make_param_dictionary(initializer):
     return params
 
 
-def convert_param_to_float16(param):
-    data = param
-    if has_float16(data.data_type):
-        data_cvt = nph.to_array(data).astype(np.float16)
-        data = nph.from_array(data_cvt, data.name)
-    return data
+def convert_params_to_float16(params_dict):
+    with Pool() as pool:
+        converted_params = pool.map(convert_param_to_float16, params_dict.values())
+    return converted_params
 
 
 def convert_params_to_float16(params_dict):
@@ -51,11 +49,28 @@ def convert_constant_node_to_float16(node):
     # ノードが属性を持っていない、または属性が空の場合、そのままノードを返す
     if not hasattr(node, 'attribute') or len(node.attribute) == 0:
         return node
-    
-    new_attributes = []
-    
+
+    # ノードの出力を変換
+    new_inputs = []
+    for inp in node.input:
+        tensor = h.get_value_info(graph, inp).type.tensor_type
+        if has_float16(tensor.data_type):
+            tensor.data_type = onnx.TensorProto.FLOAT16
+        new_inputs.append(inp)
+
+    # ノードの出力を変換
+    new_outputs = []
+    for out in node.output:
+        tensor = h.get_value_info(graph, out).type.tensor_type
+        if has_float16(tensor.data_type):
+            tensor.data_type = onnx.TensorProto.FLOAT16
+        new_outputs.append(out)
+
     # 各属性を処理
+    new_attributes = []
     for attr in node.attribute:
+        new_attributes.append(attr)
+        continue
         # TensorProto.FLOAT16 以外のデータ型のみを変換
         if hasattr(attr, 't') and has_float16(attr.t.data_type):
             data = nph.to_array(attr.t).astype(np.float16)
@@ -68,22 +83,18 @@ def convert_constant_node_to_float16(node):
     # 新しいノードを作成
     new_node = h.make_node(
         node.op_type,
-        inputs=node.input,
-        outputs=node.output,
+        inputs=new_inputs,
+        outputs=new_outputs,
         name=node.name,
-        attribute=new_attributes,
+        attributes=new_attributes,
     )
     return new_node
 
 
 def convert_constant_nodes_to_float16(nodes):
-    new_nodes = []
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(convert_constant_node_to_float16, node): node for node in nodes}
-        for future in as_completed(futures):
-            new_nodes.append(future.result())
+    with Pool() as pool:
+        new_nodes = pool.map(convert_constant_node_to_float16, nodes)
     return new_nodes
-
 
 def convert_model_to_float16(model_path: str, out_path: str):
     log.info("ONNX FLOAT16 Converter")
