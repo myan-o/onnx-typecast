@@ -31,21 +31,19 @@ def make_param_dictionary(initializer):
     return params
 
 
+def _convert_param_to_float16(param):
+    data = param
+    if has_float16(data.data_type):
+        data_cvt = nph.to_array(data).astype(np.float16)
+        data = nph.from_array(data_cvt, data.name)
+    return data
+
 def convert_params_to_float16(params_dict):
     with Pool() as pool:
-        converted_params = pool.map(convert_param_to_float16, params_dict.values())
+        converted_params = pool.map(_convert_param_to_float16, params_dict.values())
     return converted_params
 
-
-def convert_params_to_float16(params_dict):
-    converted_params = []
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(convert_param_to_float16, params_dict[param]): param for param in params_dict}
-        for future in as_completed(futures):
-            converted_params.append(future.result())
-    return converted_params
-
-def convert_constant_node_to_float16(node):
+def _convert_constant_node_to_float16(node):
     # ノードが属性を持っていない、または属性が空の場合、そのままノードを返す
     if not hasattr(node, 'attribute') or len(node.attribute) == 0:
         return node
@@ -93,7 +91,7 @@ def convert_constant_node_to_float16(node):
 
 def convert_constant_nodes_to_float16(nodes):
     with Pool() as pool:
-        new_nodes = pool.map(convert_constant_node_to_float16, nodes)
+        new_nodes = pool.map(_convert_constant_node_to_float16, nodes)
     return new_nodes
 
 def convert_model_to_float16(model_path: str, out_path: str):
