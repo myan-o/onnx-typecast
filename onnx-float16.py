@@ -12,12 +12,13 @@ from multiprocessing import Pool
 from logger import log
 import typer
 
+new_inputs = []
+new_outputs = []
 
-def get_value_info(name):
-    global graph
-    for value_info in graph.value_info:
-        if value_info.name == name:
-            return value_info
+def find_by_name(_list, name):
+    for ite in _list:
+        if item.name == name:
+            return item
     return None
 
 
@@ -53,12 +54,19 @@ def convert_params_to_float16(params_dict):
     return converted_params
 
 def _convert_constant_nodes_to_float16(node):
+    global graph
+    global new_inputs
+    global new_outputs
+
     # ノードの入力をキャスト
-    new_inputs = []
     for name in node.input:
-        vi = get_value_info(name)
+        if find_by_name(new_inputs, name) is not None:
+            continue
+
+        vi = find_by_name(graph.input, name)
         if vi is None:
             continue
+
         if has_float16(vi.type.tensor_type.elem_type):
             shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
             new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
@@ -66,11 +74,14 @@ def _convert_constant_nodes_to_float16(node):
             new_inputs.append(vi)
 
     # ノードの出力をキャスト
-    new_outputs = []
     for name in node.output:
-        vi = get_value_info(name)
+        if find_by_name(new_outputs, name) is not None:
+            continue
+
+        vi = find_by_name(graph.output, name)
         if vi is None:
             continue
+
         if has_float16(vi.type.tensor_type.elem_type):
             shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
             new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
@@ -125,8 +136,8 @@ def convert_model_to_float16(model_path: str, out_path: str):
     graph_float16 = h.make_graph(
         new_nodes,
         graph_name,
-        graph.input,
-        graph.output,
+        new_inputs,
+        new_outputs,
         initializer=converted_params,
     )
     log.info("Creating new float16 model...")
