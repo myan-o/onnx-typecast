@@ -22,7 +22,7 @@ def find_by_name(_list, name):
     return None
 
 
-def has_float16(data_type):
+def can_convert_float16(data_type):
     return data_type == TensorProto.FLOAT or \
        data_type == TensorProto.DOUBLE or \
        data_type == TensorProto.UINT64 or \
@@ -43,7 +43,7 @@ def make_param_dictionary(initializer):
 
 def _convert_param_to_float16(param):
     data = param
-    if has_float16(data.data_type):
+    if can_convert_float16(data.data_type):
         data_cvt = nph.to_array(data).astype(np.float16)
         data = nph.from_array(data_cvt, data.name)
     return data
@@ -67,7 +67,7 @@ def _convert_constant_nodes_to_float16(node):
         if vi is None:
             continue
 
-        if has_float16(vi.type.tensor_type.elem_type):
+        if can_convert_float16(vi.type.tensor_type.elem_type):
             shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
             new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
         else:
@@ -82,7 +82,7 @@ def _convert_constant_nodes_to_float16(node):
         if vi is None:
             continue
 
-        if has_float16(vi.type.tensor_type.elem_type):
+        if can_convert_float16(vi.type.tensor_type.elem_type):
             shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
             new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
         else:
@@ -98,7 +98,7 @@ def _convert_constant_nodes_to_float16(node):
     # ノードの属性(定数)をキャスト
     if hasattr(node, 'attribute'):
         for attr in node.attribute:
-            if hasattr(attr, 't') and has_float16(attr.t.data_type):
+            if hasattr(attr, 't') and can_convert_float16(attr.t.data_type):
                 data = nph.to_array(attr.t).astype(np.float16)
                 new_t = nph.from_array(data)
                 new_attr = h.make_attribute(attr.name, new_t)
