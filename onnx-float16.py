@@ -70,7 +70,7 @@ def _convert_constant_node_to_float16(node):
     new_inputs = []
     for name in node.input:
         vi = get_value_info(name)
-        if has_float16(vi.type.tensor_type.dtype):
+        if has_float16(vi.type.tensor_type):
             new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
         else:
             new_inputs.append(vi)
@@ -79,7 +79,7 @@ def _convert_constant_node_to_float16(node):
     new_outputs = []
     for name in node.output:
         vi = get_value_info(name)
-        if has_float16(vi.type.tensor_type.dtype):
+        if has_float16(vi.type.tensor_type):
             new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
         else:
             new_outputs.append(vi)
@@ -92,7 +92,7 @@ def _convert_constant_node_to_float16(node):
     }
 
     # ノードの属性をキャスト
-    if hasattr(node, 'attribute') and len(node.attribute) > 0:
+    if hasattr(node, 'attribute'):
         new_attributes = []
         for attr in node.attribute:
             if hasattr(attr, 't') and has_float16(attr.t.data_type):
