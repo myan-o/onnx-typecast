@@ -2,7 +2,7 @@
 import onnx
 import argparse
 
-def main(model_path):
+def main(model_path, start_layer, end_layer):
     # ONNXモデルを読み込む
     model = onnx.load(model_path)
 
@@ -18,16 +18,26 @@ def main(model_path):
             shape_string += f'{shape},'
         print(f'"{input.name}": [{shape_string.rstrip(",")}]')
 
+    # デフォルトでend_layerをモデルの総層数に設定
+    if end_layer is None:
+        end_layer = len(model.graph.node)
+    else:
+       end_layer+=1
+
     # モデルの各層を順番に表示
     for i, node in enumerate(model.graph.node):
-        print(f"Layer {i+1}:")
-        print(f"  Name: {node.name}")
-        print(f"  OpType: {node.op_type}")
-        print(f"  Inputs: {node.input}")
-        print(f"  Outputs: {node.output}")
+        if start_layer <= i + 1 <= end_layer:
+            print(f"Layer {i+1}:")
+            print(f"  Name: {node.name}")
+            print(f"  OpType: {node.op_type}")
+            print(f"  Inputs: {node.input}")
+            print(f"  Outputs: {node.output}")
+            print(f"  Const: {node.attribute}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Display the input shapes and layers of an ONNX model.")
     parser.add_argument("model_path", type=str, help="Path to the ONNX model file.")
+    parser.add_argument("-s", type=int, default=0, help="The starting layer index (1-based). Defaults to 0 (the first layer).")
+    parser.add_argument("-e", type=int, help="The ending layer index (1-based). Defaults to the last layer.")
     args = parser.parse_args()
-    main(args.model_path)
+    main(args.model_path, args.s, args.e)
