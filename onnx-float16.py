@@ -52,7 +52,7 @@ def convert_params_to_float16(params_dict):
         converted_params = pool.map(_convert_param_to_float16, params_dict.values())
     return converted_params
 
-def _convert_constant_node_to_float16(node):
+def _convert_constant_nodes_to_float16(node):
     # ノードの入力をキャスト
     new_inputs = []
     for name in node.input:
