@@ -99,8 +99,9 @@ def _convert_constant_node_to_float16(node):
 def convert_constant_nodes_to_float16(nodes):
 #    with Pool() as pool:
 #        new_nodes = pool.map(_convert_constant_node_to_float16, nodes)
+    new_nodes = []
     for node in nodes:
-        _convert_constant_nodes_to_float16(node)
+        new_nodes.append(_convert_constant_nodes_to_float16(node))
     return new_nodes
 
 def convert_model_to_float16(model_path: str, out_path: str):
