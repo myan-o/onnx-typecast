@@ -60,7 +60,8 @@ def _convert_constant_nodes_to_float16(node):
         if vi is None:
             continue
         if has_float16(vi.type.tensor_type.elem_type):
-            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape=vi.type.tensor_type.shape.dim))
+            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
+            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
         else:
             new_inputs.append(vi)
 
@@ -71,7 +72,8 @@ def _convert_constant_nodes_to_float16(node):
         if vi is None:
             continue
         if has_float16(vi.type.tensor_type.elem_type):
-            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape=vi.type.tensor_type.shape.dim))
+            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
+            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
         else:
             new_outputs.append(vi)
 
