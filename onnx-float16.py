@@ -90,8 +90,10 @@ def _convert_constant_nodes_to_float16(node):
             if hasattr(attr, 't') and has_float16(attr.t.data_type):
                 data = nph.to_array(attr.t).astype(np.float16)
                 new_t = nph.from_array(data)
-                attr = h.make_attribute(attr.name, new_t)
-        new_node.attribute.append(attr)
+                new_attr = h.make_attribute(attr.name, new_t)
+                new_node.attribute.append(new_attr)
+            else:
+                new_node.attribute.append(attr)
 
     return new_node
 
