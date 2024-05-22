@@ -66,7 +66,7 @@ def convert_params_to_float16(params_dict):
     return converted_params
 
 def _convert_constant_node_to_float16(node):
-    # ノードの入力を取得
+    # ノードの入力をキャスト
     new_inputs = []
     for name in node.input:
         vi = get_value_info(name)
@@ -75,7 +75,7 @@ def _convert_constant_node_to_float16(node):
         else:
             new_inputs.append(vi)
 
-    # ノードの出力を取得
+    # ノードの出力をキャスト
     new_outputs = []
     for name in node.output:
         vi = get_value_info(name)
@@ -91,14 +91,10 @@ def _convert_constant_node_to_float16(node):
         "name"    : node.name,
     }
 
-    # 各属性を処理
-    # ノードが属性を持っていない、または属性が空の場合、そのままノードを返す
+    # ノードの属性をキャスト
     if hasattr(node, 'attribute') and len(node.attribute) > 0:
         new_attributes = []
         for attr in node.attribute:
-            new_attributes.append(attr)
-            continue
-            # TensorProto.FLOAT16 以外のデータ型のみを変換
             if hasattr(attr, 't') and has_float16(attr.t.data_type):
                 data = nph.to_array(attr.t).astype(np.float16)
                 new_t = nph.from_array(data)
