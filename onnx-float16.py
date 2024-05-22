@@ -12,6 +12,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from logger import log
 import typer
 
+def has_float16(data_type):
+    return data_type == TensorProto.FLOAT or \
+       data_type == TensorProto.DOUBLE or \
+       data_type == TensorProto.UINT64 or \
+       data_type == TensorProto.UINT32 or \
+       data_type == TensorProto.UINT16 or \
+       data_type == TensorProto.UINT8 or \
+       data_type == TensorProto.INT64 or \
+       data_type == TensorProto.INT32 or \
+       data_type == TensorProto.INT16 or \
+       data_type == TensorProto.INT8 \
 
 def make_param_dictionary(initializer):
     params = OrderedDict()
@@ -22,7 +33,7 @@ def make_param_dictionary(initializer):
 
 def convert_param_to_float16(param):
     data = param
-    if data.data_type != TensorProto.FLOAT16:
+    if has_float16(data.data_type):
         data_cvt = nph.to_array(data).astype(np.float16)
         data = nph.from_array(data_cvt, data.name)
     return data
@@ -36,20 +47,33 @@ def convert_params_to_float16(params_dict):
             converted_params.append(future.result())
     return converted_params
 
-
 def convert_constant_node_to_float16(node):
-    if node.attribute[0].t.data_type != TensorProto.FLOAT16:
-        data = nph.to_array(node.attribute[0].t).astype(np.float16)
-        new_t = nph.from_array(data)
-        new_node = h.make_node(
-            node.op_type,
-            inputs=[],
-            outputs=node.output,
-            name=node.name,
-            value=new_t,
-        )
-        return new_node
-    return node
+    # ノードが属性を持っていない、または属性が空の場合、そのままノードを返す
+    if not hasattr(node, 'attribute') or len(node.attribute) == 0:
+        return node
+    
+    new_attributes = []
+    
+    # 各属性を処理
+    for attr in node.attribute:
+        # TensorProto.FLOAT16 以外のデータ型のみを変換
+        if has_float16(attr.t.data_type):
+            data = nph.to_array(attr.t).astype(np.float16)
+            new_t = nph.from_array(data)
+            new_attr = h.make_attribute(attr.name, new_t)
+            new_attributes.append(new_attr)
+        else:
+            new_attributes.append(attr)
+
+    # 新しいノードを作成
+    new_node = h.make_node(
+        node.op_type,
+        inputs=node.input,
+        outputs=node.output,
+        name=node.name,
+        attribute=new_attributes,
+    )
+    return new_node
 
 
 def convert_constant_nodes_to_float16(nodes):
