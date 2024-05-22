@@ -1,3 +1,4 @@
+#!/bin/python
 import onnx
 
 from onnx import helper as h
