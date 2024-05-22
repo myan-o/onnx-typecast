@@ -31,7 +31,20 @@ def has_float16(data_type):
        data_type == TensorProto.INT64 or \
        data_type == TensorProto.INT32 or \
        data_type == TensorProto.INT16 or \
-       data_type == TensorProto.INT8 \
+       data_type == TensorProto.INT8
+
+def has_float16_tensor(data_type):
+    return data_type == torch.float32 or \
+       data_type == torch.float64 or \
+       data_type == torch.uint64 or \
+       data_type == torch.uint32 or \
+       data_type == torch.uint16 or \
+       data_type == torch.uint8 or \
+       data_type == torch.int64 or \
+       data_type == torch.int32 or \
+       data_type == torch.int16 or \
+       data_type == torch.int8
+
 
 def make_param_dictionary(initializer):
     params = OrderedDict()
@@ -53,21 +66,30 @@ def convert_params_to_float16(params_dict):
     return converted_params
 
 def _convert_constant_node_to_float16(node):
-    # ノードの出力を変換
+    # ノードの入力を取得
     new_inputs = []
-    for inp in node.input:
-        tensor = get_value_info(inp).type.tensor_type
-        if has_float16(tensor.data_type):
-            tensor.data_type = onnx.TensorProto.FLOAT16
-        new_inputs.append(inp)
+    for name in node.input:
+        vi = get_value_info(name)
+        if has_float16(vi.type.tensor_type.dtype):
+            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
+        else:
+            new_inputs.append(vi)
 
-    # ノードの出力を変換
+    # ノードの出力を取得
     new_outputs = []
-    for out in node.output:
-        tensor = get_value_info(out).type.tensor_type
-        if has_float16(tensor.data_type):
-            tensor.data_type = onnx.TensorProto.FLOAT16
-        new_outputs.append(out)
+    for name in node.output:
+        vi = get_value_info(name)
+        if has_float16(vi.type.tensor_type.dtype):
+            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
+        else:
+            new_outputs.append(vi)
+
+    node_args = {
+        "op_type" : node.op_type,
+        "inputs"  : node.input,
+        "outputs" : node.output,
+        "name"    : node.name,
+    }
 
     # 各属性を処理
     # ノードが属性を持っていない、または属性が空の場合、そのままノードを返す
@@ -84,24 +106,8 @@ def _convert_constant_node_to_float16(node):
                 new_attributes.append(new_attr)
             else:
                 new_attributes.append(attr)
-        # 新しいノードを作成
-        new_node = h.make_node(
-            node.op_type,
-            inputs=new_inputs,
-            outputs=new_outputs,
-            name=node.name,
-            attributes=new_attributes,
-        )
-    else:
-        # 新しいノードを作成
-        new_node = h.make_node(
-            node.op_type,
-            inputs=new_inputs,
-            outputs=new_outputs,
-            name=node.name,
-        )
-    return new_node
-
+        node_args['attributes'] = new_attributes
+    return h.make_node(**node_args)
 
 def convert_constant_nodes_to_float16(nodes):
     with Pool() as pool:
