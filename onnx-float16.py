@@ -57,7 +57,7 @@ def convert_constant_node_to_float16(node):
     # 各属性を処理
     for attr in node.attribute:
         # TensorProto.FLOAT16 以外のデータ型のみを変換
-        if has_float16(attr.t.data_type):
+        if hasattr(attr, 't') and has_float16(attr.t.data_type):
             data = nph.to_array(attr.t).astype(np.float16)
             new_t = nph.from_array(data)
             new_attr = h.make_attribute(attr.name, new_t)
