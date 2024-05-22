@@ -59,8 +59,8 @@ def _convert_constant_nodes_to_float16(node):
         vi = get_value_info(name)
         if vi is None:
             continue
-        if has_float16(vi.type.tensor_type.elem_type) and (vi.type.tensor_type.shape is not None):
-            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
+        if has_float16(vi.type.tensor_type.elem_type):
+            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape.dim))
         else:
             new_inputs.append(vi)
 
@@ -70,8 +70,8 @@ def _convert_constant_nodes_to_float16(node):
         vi = get_value_info(name)
         if vi is None:
             continue
-        if has_float16(vi.type.tensor_type.elem_type) and (vi.type.tensor_type.shape is not None):
-            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
+        if has_float16(vi.type.tensor_type.elem_type):
+            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape.dim))
         else:
             new_outputs.append(vi)
 
@@ -97,11 +97,11 @@ def _convert_constant_nodes_to_float16(node):
     return h.make_node(**node_args)
 
 def convert_constant_nodes_to_float16(nodes):
-#    with Pool() as pool:
-#        new_nodes = pool.map(_convert_constant_node_to_float16, nodes)
-    new_nodes = []
-    for node in nodes:
-        new_nodes.append(_convert_constant_nodes_to_float16(node))
+    with Pool() as pool:
+        new_nodes = pool.map(_convert_constant_node_to_float16, nodes)
+#    new_nodes = []
+#    for node in nodes:
+#        new_nodes.append(_convert_constant_nodes_to_float16(node))
     return new_nodes
 
 def convert_model_to_float16(model_path: str, out_path: str):
