@@ -12,6 +12,15 @@ from multiprocessing import Pool
 from logger import log
 import typer
 
+
+def get_value_info(name):
+    global graph
+    for value_info in graph.value_info:
+        if value_info.name == name:
+            return value_info
+    return None
+
+
 def has_float16(data_type):
     return data_type == TensorProto.FLOAT or \
        data_type == TensorProto.DOUBLE or \
@@ -44,12 +53,10 @@ def convert_params_to_float16(params_dict):
     return converted_params
 
 def _convert_constant_node_to_float16(node):
-    global graph
-
     # ノードの出力を変換
     new_inputs = []
     for inp in node.input:
-        tensor = graph.get_value_info(graph, inp).type.tensor_type
+        tensor = get_value_info(inp).type.tensor_type
         if has_float16(tensor.data_type):
             tensor.data_type = onnx.TensorProto.FLOAT16
         new_inputs.append(inp)
@@ -57,7 +64,7 @@ def _convert_constant_node_to_float16(node):
     # ノードの出力を変換
     new_outputs = []
     for out in node.output:
-        tensor = graph.get_value_info(graph, out).type.tensor_type
+        tensor = get_value_info(out).type.tensor_type
         if has_float16(tensor.data_type):
             tensor.data_type = onnx.TensorProto.FLOAT16
         new_outputs.append(out)
