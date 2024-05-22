@@ -33,19 +33,6 @@ def has_float16(data_type):
        data_type == TensorProto.INT16 or \
        data_type == TensorProto.INT8
 
-def has_float16_tensor(data_type):
-    return data_type == torch.float32 or \
-       data_type == torch.float64 or \
-       data_type == torch.uint64 or \
-       data_type == torch.uint32 or \
-       data_type == torch.uint16 or \
-       data_type == torch.uint8 or \
-       data_type == torch.int64 or \
-       data_type == torch.int32 or \
-       data_type == torch.int16 or \
-       data_type == torch.int8
-
-
 def make_param_dictionary(initializer):
     params = OrderedDict()
     for data in initializer:
@@ -70,7 +57,9 @@ def _convert_constant_node_to_float16(node):
     new_inputs = []
     for name in node.input:
         vi = get_value_info(name)
-        if has_float16(vi.type.tensor_type):
+        if vi is None:
+            continue
+        if has_float16(vi.type.tensor_type.elem_type):
             new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
         else:
             new_inputs.append(vi)
@@ -79,7 +68,9 @@ def _convert_constant_node_to_float16(node):
     new_outputs = []
     for name in node.output:
         vi = get_value_info(name)
-        if has_float16(vi.type.tensor_type):
+        if vi is None:
+            continue
+        if has_float16(vi.type.tensor_type.elem_type):
             new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, vi.type.tensor_type.shape))
         else:
             new_outputs.append(vi)
