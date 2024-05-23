@@ -1,0 +1,29 @@
+#!/bin/python
+import onnx
+import sys
+
+def find_by_name(_list, name):
+    for item in _list:
+        if item.name == name:
+            return item
+    return None
+
+
+model = onnx.load(sys.argv[1])
+output_list = {}
+output = ""
+for node in model.graph.node:
+    if node.op_type != "Parameter":
+        continue
+    for name in node.input:
+        if name in output_list:
+            continue
+        vi = find_by_name(model.graph.input, name)
+        if vi is None:
+            continue
+        shape_string = ""
+        for dim in vi.type.tensor_type.shape.dim:
+            shape_string += f'{dim.dim_value},'
+        output += f'{name}[{shape_string.rstrip(",")}],'
+        output_list[name] = None
+print(output.rstrip(","), end="")
