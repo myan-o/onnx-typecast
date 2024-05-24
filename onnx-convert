@@ -88,6 +88,8 @@ def convert_model_to_float16(model_path: str, out_path: str):
     ch.check_model(model)
     opset_version = model.opset_import[0].version
     graph = model.graph
+
+    # グローバル定数のキャスト
     init = graph.initializer
     params_dict = make_param_dictionary(init)
     log.info("Converting model params to FLOAT16...")
