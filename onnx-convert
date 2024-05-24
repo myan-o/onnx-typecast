@@ -13,9 +13,6 @@ from multiprocessing import Pool
 from logger import log
 import typer
 
-new_inputs = []
-new_outputs = []
-
 def find_by_name(_list, name):
     for item in _list:
         if item.name == name:
@@ -55,40 +52,6 @@ def convert_params_to_float16(params_dict):
     return converted_params
 
 def _convert_constant_nodes_to_float16(node):
-    global graph
-    global new_inputs
-    global new_outputs
-
-    # ノードの入力をキャスト
-    for name in node.input:
-        if find_by_name(new_inputs, name) is not None:
-            continue
-
-        vi = find_by_name(graph.input, name)
-        if vi is None:
-            continue
-
-        if can_convert_float16(vi.type.tensor_type.elem_type):
-            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
-            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
-        else:
-            new_inputs.append(vi)
-
-    # ノードの出力をキャスト
-    for name in node.output:
-        if find_by_name(new_outputs, name) is not None:
-            continue
-
-        vi = find_by_name(graph.output, name)
-        if vi is None:
-            continue
-
-        if can_convert_float16(vi.type.tensor_type.elem_type):
-            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
-            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
-        else:
-            new_outputs.append(vi)
-
     new_node = h.make_node(
         op_type = node.op_type,
         inputs  = node.input,
@@ -131,6 +94,26 @@ def convert_model_to_float16(model_path: str, out_path: str):
     converted_params = convert_params_to_float16(params_dict)
     log.info("Converting nodes to FLOAT16...")
     new_nodes = convert_constant_nodes_to_float16(graph.node)
+
+    # 入力をキャスト
+    log.info("Converting inputs to FLOAT16...")
+    new_inputs = []
+    for vi in graph.input:
+        if can_convert_float16(vi.type.tensor_type.elem_type):
+            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
+            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
+        else:
+            new_inputs.append(vi)
+
+    # 出力をキャスト
+    log.info("Converting outputs to FLOAT16...")
+    new_outputs = []
+    for vi in graph.output:
+        if can_convert_float16(vi.type.tensor_type.elem_type):
+            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
+            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
+        else:
+            new_outputs.append(vi)
 
     graph_name = f"{graph.name}-float16"
     log.info("Creating new graph...")
