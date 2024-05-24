@@ -2,9 +2,9 @@
 import onnx
 import argparse
 
-def print_value_info_list(value_info_list):
+def print_value_info_list(prefix, value_info_list):
     for vi in value_info_list:
-        print('\'' + vi.name + '\'')
+        print(prefix + '\'' + vi.name + '\'')
         print('{')
         prev_is_value = True
         for dim in vi.type.tensor_type.shape.dim:
@@ -27,8 +27,8 @@ def main(model_path, start_layer, end_layer):
     model = onnx.load(model_path)
 
     # 入出力
-    print_value_info_list(model.graph.input)
-    print_value_info_list(model.graph.output)
+    print_value_info_list("input", model.graph.input)
+    print_value_info_list("output", model.graph.output)
 
     # デフォルトでend_layerをモデルの総層数に設定
     if end_layer is None:
