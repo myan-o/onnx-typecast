@@ -40,7 +40,9 @@ def set_dim_count(graph, var, num, dim_size):
             del shape[0]
             count += 1
         while count > 0:
-            shape.append(TensorProto.TensorShapeProto.Dimension(dim_value=dim_size))
+            dim = TensorProto.TensorShapeProto.Dimension()
+            dim.dim_value = dim_size
+            shape.append(dim)
             count -= 1
     else:
         tensor = numpy_helper.to_array(var)
@@ -66,15 +68,10 @@ def align_matmul_inputs(input_model_path, output_model_path):
                 continue
             a_dim_count = get_dim_count(a_var)
             b_dim_count = get_dim_count(b_var)
-            if isinstance(a_var, ValueInfoProto):
+            if a_dim_count > b_dim_count:
                 set_dim_count(graph, a_var, b_dim_count, 64)
-            elif isinstance(b_var, ValueInfoProto):
+            elif a_dim_count < b_dim_count:
                 set_dim_count(graph, b_var, a_dim_count, 64)
-            else:
-                if a_dim_count > b_dim_count:
-                    set_dim_count(graph, a_var, b_dim_count, 64)
-                elif a_dim_count < b_dim_count:
-                    set_dim_count(graph, b_var, a_dim_count, 64)
 
     # Save the updated model
     onnx.save(model, output_model_path)
