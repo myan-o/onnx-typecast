@@ -80,8 +80,19 @@ def convert_constant_nodes_to_float16(nodes):
         new_nodes.append(_convert_constant_nodes_to_float16(node))
     return new_nodes
 
+def convert_value_info(value_infos):
+    out = []
+    for vi in value_infos:
+        if can_convert_float16(vi.type.tensor_type.elem_type):
+            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
+            out.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
+        else:
+            out.append(vi)
+    return out
+
 def convert_model_to_float16(model_path: str, out_path: str):
     global graph
+
     log.info("ONNX FLOAT16 Converter")
     log.info(f"Loading Model: {model_path}")
     model = onnx.load_model(model_path)
@@ -89,62 +100,44 @@ def convert_model_to_float16(model_path: str, out_path: str):
     opset_version = model.opset_import[0].version
     graph = model.graph
 
+    graph_args = {}
+
     # 入力変数をキャスト
     log.info("Converting inputs to FLOAT16...")
-    new_inputs = []
-    for vi in graph.input:
-        if can_convert_float16(vi.type.tensor_type.elem_type):
-            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
-            new_inputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
-        else:
-            new_inputs.append(vi)
+    graph_args["inputs"] = convert_value_info(graph.input)
 
     # 出力変数をキャスト
     log.info("Converting outputs to FLOAT16...")
-    new_outputs = []
-    for vi in graph.output:
-        if can_convert_float16(vi.type.tensor_type.elem_type):
-            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
-            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
-        else:
-            new_outputs.append(vi)
+    graph_args["outputs"] = convert_value_info(graph.output)
 
     # 内部変数をキャスト
-    log.info("Converting outputs to FLOAT16...")
-    new_outputs = []
-    for vi in graph.output:
-        if can_convert_float16(vi.type.tensor_type.elem_type):
-            shape = [d.dim_value for d in vi.type.tensor_type.shape.dim]
-            new_outputs.append(h.make_tensor_value_info(vi.name, onnx.TensorProto.FLOAT16, shape))
-        else:
-            new_outputs.append(vi)
+    log.info("Converting internals to FLOAT16...")
+    graph_args["value_info"] = convert_value_info(graph.value_info)
 
     # 保存変数のキャスト
+    log.info("Converting model initializer to FLOAT16...")
     init = graph.initializer
     params_dict = make_param_dictionary(init)
-    log.info("Converting model params to FLOAT16...")
+    graph_args["initializer"] = convert_params_to_float16(params_dict)
 
     # ノード定数のキャスト
-    converted_params = convert_params_to_float16(params_dict)
     log.info("Converting nodes to FLOAT16...")
-    new_nodes = convert_constant_nodes_to_float16(graph.node)
+    graph_args["nodes"] = convert_constant_nodes_to_float16(graph.node)
 
-    graph_name = f"{graph.name}-float16"
     log.info("Creating new graph...")
-    graph_float16 = h.make_graph(
-        new_nodes,
-        graph_name,
-        new_inputs,
-        new_outputs,
-        initializer=converted_params,
-    )
+    graph_args["name"] = f"{graph.name}-float16"
+    graph_float16 = h.make_graph(**graph_args)
+
     log.info("Creating new float16 model...")
     model_float16 = h.make_model(graph_float16, producer_name="onnx-typecast")
     model_float16.opset_import[0].version = opset_version
     ch.check_model(model_float16)
+
     log.info(f"Saving converted model as: {out_path}")
     onnx.save_model(model_float16, out_path)
+
     log.info(f"Done Done London. 🎉")
+
     return
 
 
