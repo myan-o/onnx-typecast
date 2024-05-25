@@ -41,7 +41,7 @@ def set_dim_count(graph, var, num):
             count -= 1
     else:
         tensor = numpy_helper.to_array(var)
-        append_tensor_dim(tensor, num, dim_size)
+        append_tensor_dim(tensor, num - var.dims, dim_size)
         new_var = numpy_helper.from_array(tensor, name=var.name)
         graph.initializer.remove(var)
         graph.initializer.append(new_var)
@@ -61,6 +61,10 @@ def align_matmul_inputs(input_model_path, output_model_path):
                 continue
             a_dim_count = get_dim_count(a_var)
             b_dim_count = get_dim_count(b_var)
+            if a_dim_count > b_dim_count:
+                set_dim_count(graph, b_var, a_dim_count)
+            elif a_dim_count < b_dim_count:
+                set_dim_count(graph, a_var, b_dim_count)
 
     # Save the updated model
     onnx.save(model, output_model_path)
