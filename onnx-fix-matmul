@@ -27,16 +27,22 @@ def get_dim_count(var):
         return len(var.dims)
 
 
+def append_tensor_dim(tensor, num_dim, dim_size):
+    new_shape = list(tensor.shape) + [dim_size] * num_dims
+    return tensor.reshape(new_shape)
+
+
 def set_dim_count(graph, var, num):
     if var is ValueInfoProto:
         shape = var.type.tensor_type.shape.dim
-        if len(shape) == 1:
-            shape[0].dim_value = 1
-            shape.append(TensorProto.TensorShapeProto.Dimension(dim_value=shape[0].dim_value))
+        count = num - len(shape)
+        while count > 0:
+            shape.append(TensorProto.TensorShapeProto.Dimension(dim_value=dim_size)
+            count -= 1
     else:
         tensor = numpy_helper.to_array(var)
-        tensor = tensor.reshape(1, -1)
-        new_var = numpy_helper.from_array(tensor, name=var)
+        append_tensor_dim(tensor, num, dim_size)
+        new_var = numpy_helper.from_array(tensor, name=var.name)
         graph.initializer.remove(var)
         graph.initializer.append(new_var)
 
