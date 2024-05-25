@@ -36,6 +36,9 @@ def set_dim_count(graph, var, num, dim_size):
     if isinstance(var, ValueInfoProto):
         shape = var.type.tensor_type.shape.dim
         count = num - len(shape)
+        while count < 0:
+            del shape[0]
+            count += 1
         while count > 0:
             shape.append(TensorProto.TensorShapeProto.Dimension(dim_value=dim_size))
             count -= 1
