@@ -1,4 +1,4 @@
-#!/bin/python
+#!/bin/env python
 import onnx
 from onnx import version_converter
 import sys
