@@ -28,7 +28,7 @@ def get_dim_count(var):
 
 
 def append_tensor_dim(tensor, num_dim, dim_size):
-    new_shape = list(tensor.shape) + [dim_size] * num_dims
+    new_shape = list(tensor.shape) + [dim_size] * num_dim
     return tensor.reshape(new_shape)
 
 
@@ -63,10 +63,15 @@ def align_matmul_inputs(input_model_path, output_model_path):
                 continue
             a_dim_count = get_dim_count(a_var)
             b_dim_count = get_dim_count(b_var)
-            if a_dim_count > b_dim_count:
-                set_dim_count(graph, b_var, a_dim_count, 64)
-            elif a_dim_count < b_dim_count:
+            if isinstance(a_var, ValueInfoProto):
                 set_dim_count(graph, a_var, b_dim_count, 64)
+            elif isinstance(b_var, ValueInfoProto):
+                set_dim_count(graph, b_var, a_dim_count, 64)
+            else:
+                if a_dim_count > b_dim_count:
+                    set_dim_count(graph, a_var, b_dim_count, 64)
+                elif a_dim_count < b_dim_count:
+                    set_dim_count(graph, b_var, a_dim_count, 64)
 
     # Save the updated model
     onnx.save(model, output_model_path)
