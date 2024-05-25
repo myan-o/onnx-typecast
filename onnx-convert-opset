@@ -4,5 +4,5 @@ from onnx import version_converter
 import sys
 
 model = onnx.load(sys.argv[1])
-converted_model = version_converter.convert_version(model, sys.argv[2])
+converted_model = version_converter.convert_version(model, int(sys.argv[2]))
 onnx.save(converted_model, sys.argv[3])
