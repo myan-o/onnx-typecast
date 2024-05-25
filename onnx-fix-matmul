@@ -37,7 +37,7 @@ def set_dim_count(graph, var, num):
         shape = var.type.tensor_type.shape.dim
         count = num - len(shape)
         while count > 0:
-            shape.append(TensorProto.TensorShapeProto.Dimension(dim_value=dim_size)
+            shape.append(TensorProto.TensorShapeProto.Dimension(dim_value=dim_size))
             count -= 1
     else:
         tensor = numpy_helper.to_array(var)
