@@ -98,6 +98,9 @@ def convert_model_to_float16(model_path: str, out_path: str):
     model = onnx.load_model(model_path)
     ch.check_model(model)
 
+    # 形状推論を実行
+    model = onnx.shape_inference.infer_shapes(model)
+
     opset_version = model.opset_import[0].version
     graph = model.graph
 
