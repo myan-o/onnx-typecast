@@ -97,6 +97,7 @@ def convert_model_to_float16(model_path: str, out_path: str):
     log.info(f"Loading Model: {model_path}")
     model = onnx.load_model(model_path)
     ch.check_model(model)
+
     opset_version = model.opset_import[0].version
     graph = model.graph
 
