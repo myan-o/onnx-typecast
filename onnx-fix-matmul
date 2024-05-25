@@ -1,0 +1,63 @@
+#!/bin/env python
+import onnx
+import numpy as np
+from onnx import numpy_helper, helper, TensorProto
+import sys
+
+def align_matmul_inputs(input_model_path, output_model_path):
+    model = onnx.load(input_model_path)
+    graph = model.graph
+
+    for node in graph.node:
+        if node.op_type == 'MatMul':
+            input_a = node.input[0]
+            input_b = node.input[1]
+
+            # Find the initializers (weights) and input tensors
+            initializer_a = next((init for init in graph.initializer if init.name == input_a), None)
+            initializer_b = next((init for init in graph.initializer if init.name == input_b), None)
+            
+            input_a_tensor = next((inp for inp in graph.value_info if inp.name == input_a), None)
+            input_b_tensor = next((inp for inp in graph.value_info if inp.name == input_b), None)
+            
+            if initializer_a and initializer_b:
+                # Reshape the initializers to match the expected shapes
+                tensor_a = numpy_helper.to_array(initializer_a)
+                tensor_b = numpy_helper.to_array(initializer_b)
+                
+                if tensor_a.ndim == 1:
+                    tensor_a = tensor_a.reshape(1, -1)
+                if tensor_b.ndim == 1:
+                    tensor_b = tensor_b.reshape(-1, 1)
+                    
+                new_initializer_a = numpy_helper.from_array(tensor_a, name=input_a)
+                new_initializer_b = numpy_helper.from_array(tensor_b, name=input_b)
+                
+                graph.initializer.remove(initializer_a)
+                graph.initializer.remove(initializer_b)
+                graph.initializer.extend([new_initializer_a, new_initializer_b])
+
+            elif input_a_tensor and input_b_tensor:
+                shape_a = input_a_tensor.type.tensor_type.shape.dim
+                shape_b = input_b_tensor.type.tensor_type.shape.dim
+
+                if len(shape_a) == 1:
+                    shape_a[0].dim_value = 1
+                    shape_a.append(TensorProto.TensorShapeProto.Dimension(dim_value=shape_a[0].dim_value))
+                if len(shape_b) == 1:
+                    shape_b[0].dim_value = 1
+                    shape_b.append(TensorProto.TensorShapeProto.Dimension(dim_value=shape_b[0].dim_value))
+
+    # Save the updated model
+    onnx.save(model, output_model_path)
+    print(f'Updated ONNX model saved as {output_model_path}')
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python align_matmul_inputs.py <input_model_path> <output_model_path>")
+        sys.exit(1)
+
+    input_model_path = sys.argv[1]
+    output_model_path = sys.argv[2]
+
+    align_matmul_inputs(input_model_path, output_model_path)
